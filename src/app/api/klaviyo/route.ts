@@ -12,6 +12,14 @@ type KlaviyoMetric = {
 type KlaviyoRaw = Record<string, unknown>;
 type KlaviyoPayload = { data?: unknown } | KlaviyoRaw[];
 
+function isKlaviyoPayload(payload: unknown): payload is KlaviyoPayload {
+  return (
+    Boolean(payload) &&
+    typeof payload === "object" &&
+    Array.isArray((payload as { data?: unknown }).data)
+  );
+}
+
 const fallbackData: KlaviyoMetric[] = [
   {
     id: "demo-1",
@@ -36,12 +44,15 @@ const fallbackData: KlaviyoMetric[] = [
   },
 ];
 
-function normalizePayload(payload: KlaviyoPayload | unknown): KlaviyoMetric[] {
-  const fromDataField = Array.isArray((payload as KlaviyoPayload)?.data)
-    ? (payload as KlaviyoPayload).data
-    : null;
+function normalizePayload(
+  payload: KlaviyoPayload | KlaviyoRaw[] | unknown,
+): KlaviyoMetric[] {
+  const rawCandidates = Array.isArray(payload)
+    ? payload
+    : isKlaviyoPayload(payload)
+      ? payload.data
+      : [];
 
-  const rawCandidates = fromDataField ?? (Array.isArray(payload) ? payload : []);
   const items = (rawCandidates as unknown[]).filter(
     (item): item is KlaviyoRaw =>
       Boolean(item) && typeof item === "object" && !Array.isArray(item),
