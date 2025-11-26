@@ -10,7 +10,7 @@ type KlaviyoMetric = {
 };
 
 type KlaviyoRaw = Record<string, unknown>;
-type KlaviyoPayload = { data: unknown[] };
+type KlaviyoPayload = { data: KlaviyoRaw[] };
 
 function isKlaviyoPayload(payload: unknown): payload is KlaviyoPayload {
   return (

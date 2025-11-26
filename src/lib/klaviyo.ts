@@ -1,4 +1,4 @@
-export type KlaviyoResponse = Record<string, unknown>;
+export type KlaviyoResponse = { data?: unknown[] } & Record<string, unknown>;
 
 const KLAVIYO_REVISION = "2023-07-15";
 
@@ -31,9 +31,7 @@ export async function fetchKlaviyoFlows(apiKey: string): Promise<KlaviyoResponse
   }
 
   const payload = (await response.json()) as KlaviyoResponse;
-  const count = Array.isArray((payload as { data?: unknown }).data)
-    ? (payload as { data?: unknown }).data?.length
-    : 0;
+  const count = Array.isArray(payload.data) ? payload.data.length : 0;
   console.log("[sync] Flows response received", { status: response.status, count });
   return payload;
 }
@@ -70,9 +68,7 @@ export async function fetchKlaviyoCampaigns(apiKey: string): Promise<KlaviyoResp
   }
 
   const payload = (await response.json()) as KlaviyoResponse;
-  const count = Array.isArray((payload as { data?: unknown }).data)
-    ? (payload as { data?: unknown }).data?.length
-    : 0;
+  const count = Array.isArray(payload.data) ? payload.data.length : 0;
   console.log("[sync] Campaigns response received", { status: response.status, count });
   return payload;
 }
