@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ecomflows Demo
 
-## Getting Started
+Next.js (App Router) demo with Tailwind, Inter, Supabase, and a Klaviyo → Supabase sync sample.
 
-First, run the development server:
+## Quick start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `/login`, `/dashboard`, `/stores`, etc.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Set these before running the API sample:
 
-## Learn More
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `KLAVIYO_API_KEY`
 
-To learn more about Next.js, take a look at the following resources:
+## Supabase table
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Create a table `flow_metrics` with columns:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `id` uuid primary key (default `uuid_generate_v4()`)
+- `store_id` text
+- `raw` jsonb
+- `created_at` timestamptz default now()
+- `updated_at` timestamptz default now() (via trigger or app logic)
 
-## Deploy on Vercel
+## API demo
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`POST /api/sync` with JSON `{ "storeId": "store_123" }`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Fetches Klaviyo flows with `KLAVIYO_API_KEY`.
+2. Saves payload to Supabase `flow_metrics.raw` with the provided `store_id`.
+3. Returns a JSON confirmation. Error responses return `{ error: "message" }` with status 400/500.
+
+## Auth (Supabase)
+
+- Login lives at `/login` and signup at `/register`.
+- OAuth buttons call `supabase.auth.signInWithOAuth` (GitHub/Google by default). Enable providers in Supabase Auth and add redirect URLs pointing to your site (e.g., `http://localhost:3000` for dev).
+- Email/password signup uses `supabase.auth.signUp`; Supabase sends confirmation emails. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for auth to work.
