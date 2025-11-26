@@ -36,7 +36,7 @@ export default function LoginPage() {
           <p className="text-sm uppercase tracking-[0.3em] text-white/50">
             Welcome back
           </p>
-          <h1 className="heading text-3xl">Log in to Ecomflows</h1>
+          <h1 className="text-2xl font-normal text-white">Log in to Ecomflows</h1>
           <p className="text-sm text-white/60">
             Use your email and password to access your dashboard.
           </p>

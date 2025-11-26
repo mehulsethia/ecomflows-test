@@ -54,7 +54,9 @@ export default function RegisterPage() {
           <p className="text-sm uppercase tracking-[0.3em] text-white/50">
             Get started
           </p>
-          <h1 className="heading text-3xl">Create your Ecomflows account</h1>
+          <h1 className="text-2xl font-normal text-white">
+            Create your Ecomflows account
+          </h1>
           <p className="text-sm text-white/60">
             Use email, password, name, and mobile. You&apos;ll land in your
             dashboard after confirmation.
@@ -132,7 +134,7 @@ export default function RegisterPage() {
         )}
 
         <p className="text-center text-xs text-white/50">
-          Supabase will email a confirmation link (unless disabled). After
+          A confirmation link will be sent to your email. After
           confirming, you will be redirected to the dashboard.
         </p>
       </div>
