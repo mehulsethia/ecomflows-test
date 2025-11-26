@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
 type UpdateStoreBody = {
@@ -7,10 +7,11 @@ type UpdateStoreBody = {
 };
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await context.params;
     const body = (await request.json().catch(() => ({}))) as UpdateStoreBody;
     const updates: Record<string, string | null> = {};
 
@@ -26,7 +27,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from("stores")
       .update(updates)
-      .eq("id", params.id)
+      .eq("id", id)
       .select("*")
       .single();
 
