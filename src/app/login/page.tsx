@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import type { Store } from "@/lib/storeService";
+import { ensurePublicUserProfile } from "@/lib/userProfileService";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,21 +14,92 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const checkEmailExists = async (candidate: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: candidate }),
+      });
+      if (!res.ok) return false;
+      const json = (await res.json()) as { exists?: boolean };
+      return Boolean(json.exists);
+    } catch {
+      return false;
+    }
+  };
+
+  const determineDestinationAfterAuth = async (): Promise<string> => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) return "/dashboard";
+
+      const { data: stores } = await supabase
+        .from("stores")
+        .select("id, shop_domain, user_id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      const store = (stores ?? [])[0] as Store | undefined;
+      if (!store) return "/settings?prompt=store";
+
+      const { data: klaviyo } = await supabase
+        .from("integrations")
+        .select("id")
+        .eq("store_id", store.id)
+        .eq("integration_type", "KLAVIYO")
+        .maybeSingle();
+
+      if (!klaviyo) return `/settings?prompt=klaviyo&storeId=${store.id}`;
+    } catch (checkError) {
+      console.error("Post-login setup check failed", checkError);
+    }
+
+    return "/dashboard";
+  };
+
   const handleEmailLogin = async () => {
     setError(null);
     setLoading(true);
+
+    const emailClean = email.trim();
+    const passwordClean = password;
+
+    if (!emailClean || !passwordClean) {
+      setLoading(false);
+      setError("Email and password are required.");
+      return;
+    }
+
+    const emailExists = await checkEmailExists(emailClean);
+    if (!emailExists) {
+      setLoading(false);
+      setError("No account found with this email. Please sign up first.");
+      return;
+    }
+
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: emailClean,
+      password: passwordClean,
     });
 
     setLoading(false);
     if (authError) {
-      setError(authError.message);
+      const messageLower = authError.message.toLowerCase();
+      const friendly = messageLower.includes("invalid")
+        ? "Incorrect email or password."
+        : authError.message;
+      setError(friendly);
       return;
     }
 
-    router.push("/dashboard");
+    const { data: userData } = await supabase.auth.getUser();
+    await ensurePublicUserProfile(userData.user);
+
+    const destination = await determineDestinationAfterAuth();
+    router.push(destination);
   };
 
   return (
@@ -52,6 +125,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               type="email"
               placeholder="you@example.com"
+              required
               className="w-full rounded-lg border border-white/10 bg-[#0b101b] px-4 py-3 text-white placeholder:text-white/40 outline-none transition focus:border-[#b78deb] focus:ring-2 focus:ring-[#b78deb]/40"
             />
           </div>
@@ -65,6 +139,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               type="password"
               placeholder="••••••••"
+              required
               className="w-full rounded-lg border border-white/10 bg-[#0b101b] px-4 py-3 text-white placeholder:text-white/40 outline-none transition focus:border-[#b78deb] focus:ring-2 focus:ring-[#b78deb]/40"
             />
           </div>
@@ -72,7 +147,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleEmailLogin}
-            disabled={loading || !email || !password}
+            disabled={loading || !email.trim() || !password}
             className="btn w-full justify-center"
           >
             {loading ? "Signing in..." : "Log in"}

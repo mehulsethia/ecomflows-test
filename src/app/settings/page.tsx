@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
 import ConnectKlaviyo from "@/components/ConnectKlaviyo";
 import ConnectStoreCard from "@/components/ConnectStoreCard";
@@ -49,6 +50,7 @@ function deriveStatus(log: SyncLogRow | null) {
 }
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const [stores, setStores] = useState<StoreWithStatus[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>("");
   const [klaviyoKey, setKlaviyoKey] = useState("");
@@ -57,6 +59,15 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [storesLoading, setStoresLoading] = useState(false);
+  const prompt = searchParams.get("prompt");
+  const promptStoreId = searchParams.get("storeId");
+  const needsStorePrompt = prompt === "store";
+  const needsKlaviyoPrompt = prompt === "klaviyo";
+  const hasStores = stores.length > 0;
+  const hasAnyKlaviyo = stores.some((s) => Boolean(s.klaviyo));
+  const showPrompt =
+    (needsStorePrompt && !hasStores) ||
+    (needsKlaviyoPrompt && (!hasStores || !hasAnyKlaviyo));
 
   useEffect(() => {
     const load = async () => {
@@ -208,7 +219,52 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="space-y-4">
+        {showPrompt && (
+          <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-50">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
+                  Action needed
+                </p>
+                <p className="text-base font-semibold text-white">
+                  {needsStorePrompt
+                    ? "Add your Shopify store to finish setup."
+                    : "Connect your Klaviyo API key to start syncing."}
+                </p>
+                <p className="text-sm text-white/80">
+                  We detected you don&apos;t have a{" "}
+                  {needsStorePrompt ? "store" : "Klaviyo connection"} yet. Add it
+                  below to continue.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Link
+                  href="#stores-section"
+                  className="rounded-lg border border-white/30 bg-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-white/50"
+                >
+                  Go to settings
+                </Link>
+                {needsStorePrompt ? (
+                  <Link
+                    href="/stores"
+                    className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#0b101b] shadow-sm"
+                  >
+                    Add store
+                  </Link>
+                ) : (
+                  <Link
+                    href="#stores-section"
+                    className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#0b101b] shadow-sm"
+                  >
+                    Connect Klaviyo
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4" id="stores-section">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-white/60">Stores</p>

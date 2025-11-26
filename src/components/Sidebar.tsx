@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { supabase } from "@/lib/supabaseClient";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard" },
@@ -64,17 +66,50 @@ export default function Sidebar() {
 }
 
 function AccountBadge() {
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState<string>("Account");
+  const [displayEmail, setDisplayEmail] = useState<string>("—");
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const user = data.user;
+        if (!user) return;
+        const name =
+          (user.user_metadata as { name?: string | null } | null)?.name ??
+          user.email ??
+          "Account";
+        setDisplayName(name);
+        setDisplayEmail(user.email ?? "—");
+      } catch (error) {
+        console.error("Failed to load user profile", error);
+      }
+    };
+    void loadUser();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Failed to sign out", error);
+    } finally {
+      router.push("/login");
+    }
+  };
+
   return (
     <div className="group relative">
       <details className="peer/account w-full cursor-pointer">
         <summary className="list-none">
           <div className="flex items-center gap-3 rounded-2xl border border-[#b78deb]/40 bg-[#b78deb]/10 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-black/30 transition hover:-translate-y-0.5 hover:border-[#b78deb]/70 hover:bg-[#b78deb]/20">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#b78deb]/30 text-xs font-bold text-white">
-              ME
+              {displayName.slice(0, 2).toUpperCase()}
             </div>
             <div className="flex flex-col">
-              <span>Senseibles</span>
-              <span className="text-xs text-white/70">sethiamehul14@gmail.com</span>
+              <span>{displayName}</span>
+              <span className="text-xs text-white/70">{displayEmail}</span>
             </div>
             <span className="ml-auto text-lg text-white/60 transition group-open/account:rotate-180">
               ⌄
@@ -84,11 +119,11 @@ function AccountBadge() {
         <div className="absolute bottom-14 left-0 w-full rounded-2xl border border-white/10 bg-[#0f172a]/95 p-4 text-sm text-white shadow-2xl shadow-black/50 backdrop-blur-xl">
           <div className="flex items-center gap-3 border-b border-white/10 pb-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#b78deb]/30 text-sm font-bold text-white">
-              ME
+              {displayName.slice(0, 2).toUpperCase()}
             </div>
             <div>
-              <div className="text-base font-semibold">Senseibles</div>
-              <div className="text-xs text-white/60">sethiamehul14@gmail.com</div>
+              <div className="text-base font-semibold">{displayName}</div>
+              <div className="text-xs text-white/60">{displayEmail}</div>
             </div>
           </div>
           <div className="mt-3 space-y-3">
@@ -103,7 +138,13 @@ function AccountBadge() {
             </button>
           </div>
           <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-xs text-[#b78deb]">
-            <button className="font-semibold hover:underline">Log out</button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="font-semibold hover:underline"
+            >
+              Log out
+            </button>
             <button className="text-white/60 hover:text-white">Legal</button>
           </div>
         </div>
