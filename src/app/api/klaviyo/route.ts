@@ -10,7 +10,7 @@ type KlaviyoMetric = {
 };
 
 type KlaviyoRaw = Record<string, unknown>;
-type KlaviyoPayload = { data: unknown[] } | KlaviyoRaw[];
+type KlaviyoPayload = { data: unknown[] };
 
 function isKlaviyoPayload(payload: unknown): payload is KlaviyoPayload {
   return (
@@ -44,9 +44,7 @@ const fallbackData: KlaviyoMetric[] = [
   },
 ];
 
-function normalizePayload(
-  payload: KlaviyoPayload | KlaviyoRaw[] | unknown,
-): KlaviyoMetric[] {
+function normalizePayload(payload: unknown): KlaviyoMetric[] {
   let rawCandidates: unknown[] = [];
   if (Array.isArray(payload)) {
     rawCandidates = payload;
