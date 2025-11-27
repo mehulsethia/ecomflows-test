@@ -56,6 +56,7 @@ export async function GET(request: Request) {
     }
 
     const latestPerStore = new Map<
+      string,
       { store_id: string; raw: unknown; created_at: string | null }
     >();
     (metricsData ?? []).forEach((row) => {
