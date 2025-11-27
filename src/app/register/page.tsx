@@ -79,10 +79,10 @@ export default function RegisterPage() {
       return;
     }
 
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/dashboard`
-        : undefined;
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ??
+      (typeof window !== "undefined" ? window.location.origin : undefined);
+    const redirectTo = siteUrl ? `${siteUrl.replace(/\/$/, "")}/dashboard` : undefined;
 
     const emailExists = await checkEmailExists(emailClean);
     if (emailExists === true) {
