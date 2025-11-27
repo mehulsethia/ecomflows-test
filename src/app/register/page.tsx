@@ -79,15 +79,6 @@ export default function RegisterPage() {
       return;
     }
 
-    const siteUrlEnv =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      process.env.VERCEL_URL ||
-      "https://ecomflows-test.vercel.app";
-    const siteUrl = siteUrlEnv.startsWith("http")
-      ? siteUrlEnv
-      : `https://${siteUrlEnv}`;
-    const redirectTo = `${siteUrl.replace(/\/$/, "")}/login`;
-
     const emailExists = await checkEmailExists(emailClean);
     if (emailExists === true) {
       setLoading(false);
@@ -99,7 +90,6 @@ export default function RegisterPage() {
       email: emailClean,
       password: passwordClean,
       options: {
-        emailRedirectTo: redirectTo,
         data: {
           name: nameClean,
         },
@@ -127,21 +117,20 @@ export default function RegisterPage() {
       return;
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData.session) {
-      const { data: userData } = await supabase.auth.getUser();
-      await ensurePublicUserProfile(userData.user);
-      const destination = await determineDestinationAfterAuth();
-      router.push(destination);
+    // Immediately sign the user in and take them to setup.
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: emailClean,
+      password: passwordClean,
+    });
+    if (loginError) {
+      setError(loginError.message);
       return;
     }
 
-    setMessage(
-      "Check your email to confirm your account. You'll be redirected after verification.",
-    );
-    setName("");
-    setEmail("");
-    setPassword("");
+    const { data: userData } = await supabase.auth.getUser();
+    await ensurePublicUserProfile(userData.user);
+    const destination = await determineDestinationAfterAuth();
+    router.push(destination);
   };
 
   return (
