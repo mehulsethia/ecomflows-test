@@ -4,6 +4,7 @@ import { createStore } from "@/lib/storeService";
 type CreateStoreBody = {
   name?: string;
   shopDomain?: string;
+  userId?: string;
 };
 
 export async function POST(request: Request) {
@@ -11,12 +12,19 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => ({}))) as CreateStoreBody;
     const name = body.name?.trim();
     const shopDomain = body.shopDomain?.trim();
+    const userId = body.userId?.trim();
 
     if (!name) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
     }
+    if (!userId) {
+      return NextResponse.json(
+        { error: "userId is required" },
+        { status: 400 },
+      );
+    }
 
-    const store = await createStore({ name, shopDomain });
+    const store = await createStore({ name, shopDomain, userId });
     return NextResponse.json({ store });
   } catch (error) {
     return NextResponse.json(

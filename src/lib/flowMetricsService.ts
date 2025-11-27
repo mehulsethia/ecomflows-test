@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { getSupabaseAdmin } from "./supabaseAdmin";
 
 export type FlowMetricsRow = {
   id: string;
@@ -112,7 +113,9 @@ export async function saveFlowMetrics(storeId: string, snapshot: FlowMetricsSnap
   const profilesActive = snapshot.profiles.active_profiles;
   const profilesInactive = Math.max(0, profilesTotal - profilesActive);
 
-  const { error } = await supabase.from("flow_metrics").insert({
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { error } = await client.from("flow_metrics").insert({
     store_id: storeId,
     raw: snapshot,
     flow_count: flowCount,
@@ -135,7 +138,9 @@ export async function saveFlowMetricsSnapshot(
 }
 
 export async function getLatestFlowMetrics(storeId: string) {
-  const { data, error } = await supabase
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { data, error } = await client
     .from("flow_metrics")
     .select("*")
     .eq("store_id", storeId)

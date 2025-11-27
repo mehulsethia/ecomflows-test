@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { getSupabaseAdmin } from "./supabaseAdmin";
 
 export type SyncStatus = "success" | "error";
 
@@ -17,7 +18,9 @@ export async function logSync(
   endpoint: string,
   message: string | null,
 ) {
-  const { error } = await supabase.from("sync_logs").insert({
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { error } = await client.from("sync_logs").insert({
     store_id: storeId,
     status,
     endpoint,
@@ -30,7 +33,9 @@ export async function logSync(
 }
 
 export async function getLatestSyncLog(storeId: string) {
-  const { data, error } = await supabase
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { data, error } = await client
     .from("sync_logs")
     .select("*")
     .eq("store_id", storeId)
@@ -45,7 +50,9 @@ export async function getLatestSyncLog(storeId: string) {
 }
 
 export async function getSyncLogCounts() {
-  const { count, error } = await supabase
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { count, error } = await client
     .from("sync_logs")
     .select("*", { count: "exact", head: true });
 

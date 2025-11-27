@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -15,7 +14,18 @@ const baseItemClasses =
   "block rounded-lg px-4 py-3 text-sm font-semibold transition-colors border border-white/5";
 
 export default function Sidebar() {
+  const router = useRouter();
   const pathname = usePathname();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Failed to sign out", error);
+    } finally {
+      router.push("/login");
+    }
+  };
 
   return (
     <aside className="fixed inset-y-0 left-0 z-20 flex w-64 flex-col border-r border-white/10 bg-[#0b101b]/90 px-6 py-8 shadow-2xl shadow-black/40 backdrop-blur-xl">
@@ -59,96 +69,14 @@ export default function Sidebar() {
             Sync your Klaviyo metrics daily to keep alerts fresh and actionable.
           </p>
         </div>
-        <AccountBadge />
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center justify-center rounded-2xl border border-[#b78deb]/50 bg-[#b78deb]/15 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-black/30 transition hover:-translate-y-0.5 hover:border-[#b78deb] hover:bg-[#b78deb]/25"
+        >
+          Log out
+        </button>
       </div>
     </aside>
-  );
-}
-
-function AccountBadge() {
-  const router = useRouter();
-  const [displayName, setDisplayName] = useState<string>("Account");
-  const [displayEmail, setDisplayEmail] = useState<string>("—");
-
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const { data } = await supabase.auth.getUser();
-        const user = data.user;
-        if (!user) return;
-        const name =
-          (user.user_metadata as { name?: string | null } | null)?.name ??
-          user.email ??
-          "Account";
-        setDisplayName(name);
-        setDisplayEmail(user.email ?? "—");
-      } catch (error) {
-        console.error("Failed to load user profile", error);
-      }
-    };
-    void loadUser();
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error("Failed to sign out", error);
-    } finally {
-      router.push("/login");
-    }
-  };
-
-  return (
-    <div className="group relative">
-      <details className="peer/account w-full cursor-pointer">
-        <summary className="list-none">
-          <div className="flex items-center gap-3 rounded-2xl border border-[#b78deb]/40 bg-[#b78deb]/10 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-black/30 transition hover:-translate-y-0.5 hover:border-[#b78deb]/70 hover:bg-[#b78deb]/20">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#b78deb]/30 text-xs font-bold text-white">
-              {displayName.slice(0, 2).toUpperCase()}
-            </div>
-            <div className="flex flex-col">
-              <span>{displayName}</span>
-              <span className="text-xs text-white/70">{displayEmail}</span>
-            </div>
-            <span className="ml-auto text-lg text-white/60 transition group-open/account:rotate-180">
-              ⌄
-            </span>
-          </div>
-        </summary>
-        <div className="absolute bottom-14 left-0 w-full rounded-2xl border border-white/10 bg-[#0f172a]/95 p-4 text-sm text-white shadow-2xl shadow-black/50 backdrop-blur-xl">
-          <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#b78deb]/30 text-sm font-bold text-white">
-              {displayName.slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <div className="text-base font-semibold">{displayName}</div>
-              <div className="text-xs text-white/60">{displayEmail}</div>
-            </div>
-          </div>
-          <div className="mt-3 space-y-3">
-            <button className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-[#b78deb] hover:text-white">
-              ✨ <span>What&apos;s new?</span>
-            </button>
-            <button className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-[#b78deb] hover:text-white">
-              🧾 <span>Billing</span>
-            </button>
-            <button className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-[#b78deb] hover:text-white">
-              ⚙️ <span>Settings</span>
-            </button>
-          </div>
-          <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-xs text-[#b78deb]">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="font-semibold hover:underline"
-            >
-              Log out
-            </button>
-            <button className="text-white/60 hover:text-white">Legal</button>
-          </div>
-        </div>
-      </details>
-    </div>
   );
 }

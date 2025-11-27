@@ -1,5 +1,6 @@
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import type { FlowMetricsSnapshot } from "@/lib/flowMetricsService";
 import ProfilesTable from "@/components/ProfilesTable";
 import DashboardSyncButton from "@/components/DashboardSyncButton";
@@ -14,7 +15,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function loadSnapshots(): Promise<SnapshotRow[]> {
-  const { data, error } = await supabase
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { data, error } = await client
     .from("flow_metrics")
     .select("store_id, raw, created_at")
     .order("created_at", { ascending: false });

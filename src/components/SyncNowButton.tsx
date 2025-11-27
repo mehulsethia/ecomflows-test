@@ -36,7 +36,7 @@ export default function SyncNowButton({ storeId, disabled }: Props) {
       const body = await res.json().catch(() => ({}));
       console.error("[sync-button] Sync failed", body);
       setError(body.error ?? "Sync failed");
-      addNotification({
+      await addNotification({
         id: `sync-fail-${Date.now()}`,
         title: "Sync failed",
         body: body.error ?? "Sync failed",
@@ -48,14 +48,14 @@ export default function SyncNowButton({ storeId, disabled }: Props) {
     const body = await res.json().catch(() => ({}));
     console.log("[sync-button] Sync succeeded", body);
     if (body?.notification) {
-      addNotification({
+      await addNotification({
         id: `sync-${Date.now()}`,
         title: body.notification.title ?? "Sync complete",
         body: body.notification.body ?? "Data synced successfully.",
         createdAt: new Date().toISOString(),
       });
     }
-    addNotification({
+    await addNotification({
       id: `sync-profiles-${Date.now()}`,
       title: "Profiles refreshed",
       body: "Profiles and metrics have been pulled. Latest counts are now live.",

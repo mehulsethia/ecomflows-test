@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseClient";
 import { upsertKlaviyoIntegration } from "@/lib/storeService";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 type UpsertIntegrationBody = {
   storeId?: string;
@@ -54,7 +54,17 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { error } = await supabase
+    const supabaseAdmin = getSupabaseAdmin();
+    const client = supabaseAdmin ?? null;
+
+    if (!client) {
+      return NextResponse.json(
+        { error: "Supabase admin client is not configured" },
+        { status: 500 },
+      );
+    }
+
+    const { error } = await client
       .from("integrations")
       .delete()
       .eq("store_id", storeId)

@@ -52,15 +52,8 @@ function deriveStatus(log: SyncLogRow | null) {
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const [stores, setStores] = useState<StoreWithStatus[]>([]);
-  const [selectedStore, setSelectedStore] = useState<string>("");
-  const [klaviyoKey, setKlaviyoKey] = useState("");
-  const [shopDomain, setShopDomain] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [storesLoading, setStoresLoading] = useState(false);
   const prompt = searchParams.get("prompt");
-  const promptStoreId = searchParams.get("storeId");
   const needsStorePrompt = prompt === "store";
   const needsKlaviyoPrompt = prompt === "klaviyo";
   const hasStores = stores.length > 0;
@@ -78,7 +71,7 @@ export default function SettingsPage() {
         .order("created_at", { ascending: false });
 
       if (storeError) {
-        setError(storeError.message);
+        console.error("Failed to load stores", storeError);
         setStoresLoading(false);
         return;
       }
@@ -130,81 +123,11 @@ export default function SettingsPage() {
       });
 
       setStores(withIntegration);
-      if (withIntegration[0]) {
-        setSelectedStore(withIntegration[0].id);
-        setShopDomain(withIntegration[0].shop_domain ?? "");
-      }
       setStoresLoading(false);
     };
 
     void load();
   }, []);
-
-  const currentStore = stores.find((s) => s.id === selectedStore);
-
-  const handleSaveKlaviyo = async () => {
-    if (!selectedStore) return;
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    const res = await fetch("/api/integrations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        storeId: selectedStore,
-        integrationType: "KLAVIYO",
-        apiKey: klaviyoKey,
-      }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Failed to save Klaviyo key");
-      return;
-    }
-    setMessage("Klaviyo key updated.");
-  };
-
-  const handleDisconnectKlaviyo = async () => {
-    if (!selectedStore) return;
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    const res = await fetch("/api/integrations", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        storeId: selectedStore,
-        integrationType: "KLAVIYO",
-      }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Failed to disconnect Klaviyo");
-      return;
-    }
-    setMessage("Klaviyo disconnected.");
-  };
-
-  const handleSaveStore = async () => {
-    if (!selectedStore) return;
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    const res = await fetch(`/api/stores/${selectedStore}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shopDomain }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Failed to update store");
-      return;
-    }
-    setMessage("Store updated.");
-  };
 
   return (
     <AppLayout>
@@ -221,45 +144,20 @@ export default function SettingsPage() {
 
         {showPrompt && (
           <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-50">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
-                  Action needed
-                </p>
-                <p className="text-base font-semibold text-white">
-                  {needsStorePrompt
-                    ? "Add your Shopify store to finish setup."
-                    : "Connect your Klaviyo API key to start syncing."}
-                </p>
-                <p className="text-sm text-white/80">
-                  We detected you don&apos;t have a{" "}
-                  {needsStorePrompt ? "store" : "Klaviyo connection"} yet. Add it
-                  below to continue.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Link
-                  href="#stores-section"
-                  className="rounded-lg border border-white/30 bg-white/15 px-4 py-2 text-xs font-semibold text-white hover:border-white/50"
-                >
-                  Go to settings
-                </Link>
-                {needsStorePrompt ? (
-                  <Link
-                    href="/stores"
-                    className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#0b101b] shadow-sm"
-                  >
-                    Add store
-                  </Link>
-                ) : (
-                  <Link
-                    href="#stores-section"
-                    className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#0b101b] shadow-sm"
-                  >
-                    Connect Klaviyo
-                  </Link>
-                )}
-              </div>
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
+                Action needed
+              </p>
+              <p className="text-base font-semibold text-white">
+                {needsStorePrompt
+                  ? "Add your Shopify store to finish setup."
+                  : "Connect your Klaviyo API key to start syncing."}
+              </p>
+              <p className="text-sm text-white/80">
+                We detected you don&apos;t have a{" "}
+                {needsStorePrompt ? "store" : "Klaviyo connection"} yet. Add it
+                below to continue.
+              </p>
             </div>
           </div>
         )}
@@ -342,99 +240,6 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="glass-card rounded-2xl border border-white/10 p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm text-white/60">Select store</p>
-              <p className="text-lg font-semibold text-white">
-                {currentStore ? currentStore.name : "No store selected"}
-              </p>
-            </div>
-            <select
-              value={selectedStore}
-              onChange={(e) => {
-                setSelectedStore(e.target.value);
-                const next = stores.find((s) => s.id === e.target.value);
-                setShopDomain(next?.shop_domain ?? "");
-              }}
-              className="w-full max-w-xs rounded-lg border border-white/10 bg-[#0b101b] px-3 py-2 text-sm text-white outline-none transition focus:border-[#b78deb] focus:ring-2 focus:ring-[#b78deb]/40"
-            >
-              {stores.map((store) => (
-                <option key={store.id} value={store.id} className="bg-[#0b101b]">
-                  {store.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-[#0b101b]/60 p-4">
-              <p className="text-sm text-white/60">Klaviyo API key</p>
-              <div className="mt-3 space-y-3">
-                <input
-                  value={klaviyoKey}
-                  onChange={(e) => setKlaviyoKey(e.target.value)}
-                  placeholder="pk_..."
-                  className="w-full rounded-lg border border-white/10 bg-[#0b101b] px-3 py-2 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-[#b78deb] focus:ring-2 focus:ring-[#b78deb]/40"
-                />
-                <div className="flex gap-2">
-                  <button
-                    className="btn px-4 py-2 text-sm"
-                    onClick={handleSaveKlaviyo}
-                    disabled={loading || !klaviyoKey}
-                  >
-                    Save key
-                  </button>
-                  <button
-                    className="btn px-4 py-2 text-sm"
-                    onClick={handleDisconnectKlaviyo}
-                    disabled={loading}
-                  >
-                    Disconnect
-                  </button>
-                </div>
-                <p className="text-xs text-white/50">
-                  Current status: {currentStore?.klaviyo ? "Connected" : "Not connected"}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-[#0b101b]/60 p-4">
-              <p className="text-sm text-white/60">Shopify domain</p>
-              <div className="mt-3 space-y-3">
-                <input
-                  value={shopDomain}
-                  onChange={(e) => setShopDomain(e.target.value)}
-                  placeholder="your-store.myshopify.com"
-                  className="w-full rounded-lg border border-white/10 bg-[#0b101b] px-3 py-2 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-[#b78deb] focus:ring-2 focus:ring-[#b78deb]/40"
-                />
-                <div className="flex gap-2">
-                  <button
-                    className="btn px-4 py-2 text-sm"
-                    onClick={handleSaveStore}
-                    disabled={loading || !selectedStore}
-                  >
-                    Save domain
-                  </button>
-                </div>
-                <p className="text-xs text-white/50">
-                  Store domain is used for Shopify connection metadata.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {message && (
-            <div className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-              {message}
-            </div>
-          )}
-          {error && (
-            <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-              {error}
-            </div>
-          )}
-        </div>
       </div>
     </AppLayout>
   );

@@ -14,18 +14,20 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const checkEmailExists = async (candidate: string): Promise<boolean> => {
+  const checkEmailExists = async (
+    candidate: string,
+  ): Promise<boolean | null> => {
     try {
       const res = await fetch("/api/auth/check-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: candidate }),
       });
-      if (!res.ok) return false;
+      if (!res.ok) return null;
       const json = (await res.json()) as { exists?: boolean };
-      return Boolean(json.exists);
+      return typeof json.exists === "boolean" ? json.exists : null;
     } catch {
-      return false;
+      return null;
     }
   };
 
@@ -74,7 +76,7 @@ export default function LoginPage() {
     }
 
     const emailExists = await checkEmailExists(emailClean);
-    if (!emailExists) {
+    if (emailExists === false) {
       setLoading(false);
       setError("No account found with this email. Please sign up first.");
       return;

@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { getSupabaseAdmin } from "./supabaseAdmin";
 
 export type Store = {
   id: string;
@@ -26,7 +27,10 @@ export async function createStore({
   shopDomain?: string | null;
   userId?: string | null;
 }) {
-  const { data, error } = await supabase
+  // Use the service role if available to bypass RLS issues on insert.
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { data, error } = await client
     .from("stores")
     .insert({
       name,
@@ -41,7 +45,9 @@ export async function createStore({
 }
 
 export async function getStoreById(storeId: string) {
-  const { data, error } = await supabase
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { data, error } = await client
     .from("stores")
     .select("*")
     .eq("id", storeId)
@@ -52,7 +58,9 @@ export async function getStoreById(storeId: string) {
 }
 
 export async function getStores() {
-  const { data, error } = await supabase
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { data, error } = await client
     .from("stores")
     .select("*")
     .order("created_at", { ascending: false });
@@ -62,7 +70,9 @@ export async function getStores() {
 }
 
 export async function getKlaviyoIntegrationForStore(storeId: string) {
-  const { data, error } = await supabase
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { data, error } = await client
     .from("integrations")
     .select("*")
     .eq("store_id", storeId)
@@ -75,7 +85,9 @@ export async function getKlaviyoIntegrationForStore(storeId: string) {
 
 export async function getIntegrationsForStores(storeIds: string[]) {
   if (storeIds.length === 0) return [];
-  const { data, error } = await supabase
+  const client = getSupabaseAdmin() ?? supabase;
+
+  const { data, error } = await client
     .from("integrations")
     .select("*")
     .in("store_id", storeIds);
@@ -85,10 +97,11 @@ export async function getIntegrationsForStores(storeIds: string[]) {
 }
 
 export async function upsertKlaviyoIntegration(storeId: string, apiKey: string) {
+  const client = getSupabaseAdmin() ?? supabase;
   // Check existing integration first to avoid depending on DB constraints
   const existing = await getKlaviyoIntegrationForStore(storeId);
   if (existing) {
-    const { error } = await supabase
+    const { error } = await client
       .from("integrations")
       .update({ api_key: apiKey, metadata: { provider: "klaviyo" } })
       .eq("id", existing.id);
@@ -96,7 +109,7 @@ export async function upsertKlaviyoIntegration(storeId: string, apiKey: string) 
     return { ...existing, api_key: apiKey };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("integrations")
     .insert({
       store_id: storeId,
