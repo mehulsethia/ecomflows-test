@@ -167,7 +167,6 @@ export default async function DashboardPage() {
             <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
               <h2 className="text-lg font-semibold text-white">Profiles</h2>
               <div className="flex items-center gap-3 text-xs text-white/60">
-                <span>Progress to 4k</span>
                 <Progress value={Math.min(100, Math.round((agg.profiles.total / 4000) * 100))} />
               </div>
             </div>

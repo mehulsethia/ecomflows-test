@@ -71,15 +71,19 @@ export default function TopBar() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const saveNotifications = (next: Notification[]) => {
+    setNotifications(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(notificationKey(userId), JSON.stringify(next));
+      window.dispatchEvent(new Event("storage"));
+    }
+  };
+
   const markAsRead = (id: string) => {
     const updated = notifications.map((n) =>
       n.id === id ? { ...n, read: true } : n,
     );
-    setNotifications(updated);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      window.dispatchEvent(new Event("storage"));
-    }
+    saveNotifications(updated);
   };
 
   const formatTime = (iso?: string) => {
@@ -170,11 +174,7 @@ export default function TopBar() {
                       onClick={(e) => {
                         e.stopPropagation();
                         const next = notifications.filter((item) => item.id !== n.id);
-                        setNotifications(next);
-                        if (typeof window !== "undefined") {
-                          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-                          window.dispatchEvent(new Event("storage"));
-                        }
+                        saveNotifications(next);
                       }}
                     >
                       ✕
