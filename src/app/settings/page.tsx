@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
@@ -49,7 +49,7 @@ function deriveStatus(log: SyncLogRow | null) {
   };
 }
 
-export default function SettingsPage() {
+function SettingsPageInner() {
   const searchParams = useSearchParams();
   const [stores, setStores] = useState<StoreWithStatus[]>([]);
   const [storesLoading, setStoresLoading] = useState(false);
@@ -242,5 +242,17 @@ export default function SettingsPage() {
 
       </div>
     </AppLayout>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-sm text-white/60">Loading settings...</div>
+      }
+    >
+      <SettingsPageInner />
+    </Suspense>
   );
 }
