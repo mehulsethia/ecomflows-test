@@ -86,38 +86,19 @@ export default function RegisterPage() {
       return;
     }
 
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: emailClean,
-      password: passwordClean,
-      options: {
-        data: {
-          name: nameClean,
-        },
-      },
+    // Create account via service-role API (auto-confirm) then sign in.
+    const registerRes = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: emailClean, password: passwordClean, name: nameClean }),
     });
-
     setLoading(false);
-    // Supabase can return no error but an empty identities array if the user already exists.
-    if (
-      signUpData?.user &&
-      Array.isArray(signUpData.user.identities) &&
-      signUpData.user.identities.length === 0
-    ) {
-      setError("An account with this email already exists. Please log in instead.");
+    if (!registerRes.ok) {
+      const body = await registerRes.json().catch(() => ({}));
+      setError(body.error ?? "Failed to create account");
       return;
     }
 
-    if (signUpError) {
-      const messageLower = signUpError.message.toLowerCase();
-      const friendly =
-        messageLower.includes("already") || messageLower.includes("registered")
-          ? "An account with this email already exists. Please log in instead."
-          : signUpError.message;
-      setError(friendly);
-      return;
-    }
-
-    // Immediately sign the user in and take them to setup.
     const { error: loginError } = await supabase.auth.signInWithPassword({
       email: emailClean,
       password: passwordClean,
@@ -225,11 +206,6 @@ export default function RegisterPage() {
             {message}
           </div>
         )}
-
-        <p className="text-center text-xs text-white/50">
-          A confirmation link will be sent to your email. After
-          confirming, you will be redirected to the dashboard.
-        </p>
       </div>
     </div>
   );
