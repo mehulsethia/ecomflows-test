@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
@@ -58,76 +58,78 @@ function SettingsPageInner() {
   const needsKlaviyoPrompt = prompt === "klaviyo";
   const hasStores = stores.length > 0;
   const hasAnyKlaviyo = stores.some((s) => Boolean(s.klaviyo));
+  const needsKlaviyoAfterStore = needsStorePrompt && hasStores && !hasAnyKlaviyo;
   const showPrompt =
     (needsStorePrompt && !hasStores) ||
-    (needsKlaviyoPrompt && (!hasStores || !hasAnyKlaviyo));
+    (needsKlaviyoPrompt && (!hasStores || !hasAnyKlaviyo)) ||
+    needsKlaviyoAfterStore;
+
+  const loadStores = useCallback(async () => {
+    setStoresLoading(true);
+    const { data: storesData, error: storeError } = await supabase
+      .from("stores")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (storeError) {
+      console.error("Failed to load stores", storeError);
+      setStores([]);
+      setStoresLoading(false);
+      return;
+    }
+
+    const ids = (storesData ?? []).map((s) => (s as Store).id);
+    if (ids.length === 0) {
+      setStores([]);
+      setStoresLoading(false);
+      return;
+    }
+
+    const [{ data: logs }, { data: integrations }] = await Promise.all([
+      supabase
+        .from("sync_logs")
+        .select("*")
+        .in("store_id", ids)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("integrations")
+        .select("*")
+        .eq("integration_type", "KLAVIYO")
+        .in("store_id", ids),
+    ]);
+
+    const latestByStore = new Map<string, SyncLogRow>();
+    (logs as SyncLogRow[] | null)?.forEach((log) => {
+      if (!latestByStore.has(log.store_id)) {
+        latestByStore.set(log.store_id, log);
+      }
+    });
+
+    const klaviyoByStore = new Map<string, Integration>();
+    (integrations as Integration[] | null)?.forEach((integration) => {
+      if (!klaviyoByStore.has(integration.store_id)) {
+        klaviyoByStore.set(integration.store_id, integration);
+      }
+    });
+
+    const withIntegration: StoreWithStatus[] = (storesData ?? []).map((s) => {
+      const store = s as Store;
+      return {
+        ...store,
+        klaviyo: klaviyoByStore.get(store.id) ?? null,
+        latestLog: latestByStore.get(store.id) ?? null,
+      };
+    });
+
+    setStores(withIntegration);
+    setStoresLoading(false);
+  }, []);
 
   useEffect(() => {
-    const load = async () => {
-      setStoresLoading(true);
-      const { data: storesData, error: storeError } = await supabase
-        .from("stores")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (storeError) {
-        console.error("Failed to load stores", storeError);
-        setStoresLoading(false);
-        return;
-      }
-
-      const ids = (storesData ?? []).map((s) => (s as Store).id);
-      if (ids.length === 0) {
-        setStores([]);
-        setStoresLoading(false);
-        return;
-      }
-
-      const [{ data: logs }, { data: integrations }] = await Promise.all([
-        supabase
-          .from("sync_logs")
-          .select("*")
-          .in("store_id", ids)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("integrations")
-          .select("*")
-          .eq("integration_type", "KLAVIYO")
-          .in("store_id", ids),
-      ]);
-
-      const latestByStore = new Map<string, SyncLogRow>();
-      (logs as SyncLogRow[] | null)?.forEach((log) => {
-        if (!latestByStore.has(log.store_id)) {
-          latestByStore.set(log.store_id, log);
-        }
-      });
-
-      const klaviyoByStore = new Map<string, Integration>();
-      (integrations as Integration[] | null)?.forEach((integration) => {
-        if (!klaviyoByStore.has(integration.store_id)) {
-          klaviyoByStore.set(integration.store_id, integration);
-        }
-      });
-
-      const withIntegration: StoreWithStatus[] = (storesData ?? []).map((s) => {
-        const store = s as Store;
-        return {
-          ...store,
-          klaviyo:
-            (integrations ?? []).find(
-              (i) => (i as Integration).store_id === store.id,
-            ) ?? null,
-          latestLog: latestByStore.get(store.id) ?? null,
-        };
-      });
-
-      setStores(withIntegration);
-      setStoresLoading(false);
-    };
-
-    void load();
-  }, []);
+    // Data fetching with state updates is intended here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadStores();
+  }, [loadStores]);
 
   return (
     <AppLayout>
@@ -149,14 +151,14 @@ function SettingsPageInner() {
                 Action needed
               </p>
               <p className="text-base font-semibold text-white">
-                {needsStorePrompt
+                {needsStorePrompt && !hasStores
                   ? "Add your Shopify store to finish setup."
-                  : "Connect your Klaviyo API key to start syncing."}
+                  : "Thanks for connecting your store. Add your Klaviyo API key to continue."}
               </p>
               <p className="text-sm text-white/80">
-                We detected you don&apos;t have a{" "}
-                {needsStorePrompt ? "store" : "Klaviyo connection"} yet. Add it
-                below to continue.
+                {needsStorePrompt && !hasStores
+                  ? "We detected you don't have a store yet. Add it below to continue."
+                  : "Connect Klaviyo next so we can sync your metrics."}
               </p>
             </div>
           </div>
@@ -177,7 +179,7 @@ function SettingsPageInner() {
               Loading stores...
             </div>
           ) : stores.length === 0 ? (
-            <ConnectStoreCard />
+            <ConnectStoreCard onCreated={loadStores} />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#17223e]/80 shadow-2xl shadow-black/40 backdrop-blur-xl transition hover:-translate-y-1 hover:border-[#b78deb]/60">
               <table className="min-w-full text-left text-sm text-white/80">
@@ -223,6 +225,7 @@ function SettingsPageInner() {
                           <ConnectKlaviyo
                             storeId={store.id}
                             hasIntegration={Boolean(store.klaviyo)}
+                            onSaved={loadStores}
                           />
                         </td>
                         <td className="px-6 py-4 text-right">

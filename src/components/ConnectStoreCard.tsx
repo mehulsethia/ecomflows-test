@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { addNotification } from "./TopBar";
 
 type Props = {
   onCreated?: () => void;
@@ -47,8 +48,20 @@ export default function ConnectStoreCard({ onCreated }: Props) {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setError(body.error ?? "Failed to create store");
+      await addNotification({
+        id: `store-error-${Date.now()}`,
+        title: "Store connection failed",
+        body: body.error ?? "Failed to create store",
+        createdAt: new Date().toISOString(),
+      });
       return;
     }
+    await addNotification({
+      id: `store-success-${Date.now()}`,
+      title: "Store connected",
+      body: `${nameClean} connected successfully.`,
+      createdAt: new Date().toISOString(),
+    });
     router.refresh();
     onCreated?.();
     setName("");

@@ -249,7 +249,7 @@ type MetricAggregateResponse = {
   }>;
 };
 
-async function fetchRevenueForRange(
+export async function fetchRevenueForRange(
   apiKey: string,
   metricId: string,
   range: TimeframeKey,
@@ -294,7 +294,7 @@ async function fetchRevenueForRange(
   let payload: MetricAggregateResponse | null = null;
   try {
     payload = await doRequest(basePayload);
-  } catch (err) {
+  } catch {
     payload = await doRequest({
       ...basePayload,
       data: {
@@ -342,7 +342,7 @@ type MetricItem = {
   attributes?: { name?: string };
 };
 
-type MetricsResponse = {
+export type MetricsResponse = {
   data?: MetricItem[];
   links?: { next?: string | null };
 };
@@ -354,7 +354,7 @@ async function fetchMetricByFilter(apiKey: string, filter: string) {
   return Array.isArray(json.data) ? json.data : [];
 }
 
-async function fetchMetricsPage(apiKey: string, url: string) {
+export async function fetchMetricsPage(apiKey: string, url: string) {
   const response = await fetch(url, {
     headers: {
       Accept: "application/json",
@@ -377,7 +377,7 @@ async function fetchMetricsPage(apiKey: string, url: string) {
   return payload;
 }
 
-async function fetchPlacedOrderMetricId(apiKey: string) {
+export async function fetchPlacedOrderMetricId(apiKey: string) {
   // First, try filtered queries to reduce paging.
   const filters = ['equals(name,"Placed Order")', 'contains(name,"Placed Order")'];
   for (const filter of filters) {

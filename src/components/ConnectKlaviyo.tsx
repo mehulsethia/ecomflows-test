@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { addNotification } from "./TopBar";
 
 type Props = {
   storeId: string;
   hasIntegration: boolean;
+  onSaved?: () => void;
 };
 
-export default function ConnectKlaviyo({ storeId, hasIntegration }: Props) {
+export default function ConnectKlaviyo({ storeId, hasIntegration, onSaved }: Props) {
   const router = useRouter();
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,11 +33,24 @@ export default function ConnectKlaviyo({ storeId, hasIntegration }: Props) {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setError(body.error ?? "Failed to save integration");
+      await addNotification({
+        id: `klaviyo-error-${Date.now()}`,
+        title: "Klaviyo connection failed",
+        body: body.error ?? "Failed to save integration",
+        createdAt: new Date().toISOString(),
+      });
       return;
     }
+    await addNotification({
+      id: `klaviyo-success-${Date.now()}`,
+      title: "Klaviyo connected",
+      body: "API key saved and connection established.",
+      createdAt: new Date().toISOString(),
+    });
     setApiKey("");
     setOpen(false);
     router.refresh();
+    onSaved?.();
   };
 
   if (hasIntegration && !open) {
