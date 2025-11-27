@@ -79,10 +79,14 @@ export default function RegisterPage() {
       return;
     }
 
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ??
-      (typeof window !== "undefined" ? window.location.origin : undefined);
-    const redirectTo = siteUrl ? `${siteUrl.replace(/\/$/, "")}/dashboard` : undefined;
+    const siteUrlEnv =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.VERCEL_URL ||
+      "https://ecomflows-test.vercel.app";
+    const siteUrl = siteUrlEnv.startsWith("http")
+      ? siteUrlEnv
+      : `https://${siteUrlEnv}`;
+    const redirectTo = `${siteUrl.replace(/\/$/, "")}/login`;
 
     const emailExists = await checkEmailExists(emailClean);
     if (emailExists === true) {
